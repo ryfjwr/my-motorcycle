@@ -41,9 +41,14 @@
           {imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m'});
   }
 
+  var _url = window.location.href
+  var a = document.createElement('a')
+  a.href = _url
+  var url = "/places" + a.search
+
   $.ajax({
     type: 'GET',
-    url: '/places',
+    url: url,
     dataType: 'json',
     success: function(data) {
       data.forEach(function(d){
