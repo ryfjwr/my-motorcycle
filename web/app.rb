@@ -17,7 +17,7 @@ class App < Sinatra::Base
   end
 
   get '/places' do
-    places = DB[:places].all
+    places = $DB[:places].all
     json places
   end
 
