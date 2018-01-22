@@ -7,6 +7,7 @@ require 'haml'
 require_relative './common.rb'
 
 class App < Sinatra::Base
+  set :bind, '0.0.0.0'
   configure :development do
     register Sinatra::Reloader
   end
