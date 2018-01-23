@@ -33,7 +33,7 @@ void setup(){
  
 void loop()                     // run over and over again
 {
-  delay(5000);
+  //delay(5000);
   readGPS();  //This is a function we define below which reads two NMEA sentences from GPS
 }
 
@@ -87,16 +87,23 @@ void readGPS(){  //This function will read and remember two NMEA sentences from 
 
   Serial.println("LNG");
   Serial.println(lngBuf);
+  double _tmplat = atof(latBuf);
+  double _tmplng = atof(lngBuf);
   
-  float lat = strtod(latBuf, NULL);
-  float lng = strtod(lngBuf, NULL);
+  Serial.println("_tmplat");
+  Serial.println(_tmplat);
+  Serial.println("_tmplng");
+  Serial.println(_tmplng);
+  
+  //double lat = round(_tmplat, 4);
+  //double lng = round(_tmplng, 4);
 
-  //double lat = atof(latBuf);
-  //double lng = atof(lngBuf);
-  Serial.println("float lat");
+  float lat = atof(latBuf);
+  float lng = atof(lngBuf);
+  Serial.println("double lat");
   Serial.println(lat);
 
-  Serial.println("float lng");
+  Serial.println("double lng");
   Serial.println(lng);
   
   //free(latBuf);
@@ -126,6 +133,21 @@ void sendIO(float lat, float lng){
   sakuraio.enqueueTx(1, lng);
   sakuraio.enqueueTx(2, count); 
   sakuraio.send();
+}
+
+double round( double val, int precision )
+{
+    /* ***** 内部変数定義 ***** */
+    double    ret;
+    char    buf[256] = {'\0'};
+    char    *p;
+
+    /* ***** 丸めを行い文字列に変換 ***** */
+    sprintf( buf, "%.*f", precision, val );
+    /* ***** 文字列から数値に再変換 ***** */
+    ret = strtod( buf, &p );
+
+    return ret;
 }
 
 void checkQueue(){
@@ -190,18 +212,18 @@ char *grepLng(char s1, char s2, char e1, char e2, char *buf){
     }
   }
 
-  Serial.println("grepLng Start index decided...");
-  Serial.println(startIndex);
+  //Serial.println("grepLng Start index decided...");
+  //Serial.println(startIndex);
 
-  Serial.println("grepLng FinishIndex decided...");
-  Serial.println(finishIndex);
+  //Serial.println("grepLng FinishIndex decided...");
+  //Serial.println(finishIndex);
   int lSize = finishIndex - startIndex;
   
-  Serial.println("grep Lng lSize...");
-  Serial.println(lSize);
+  //Serial.println("grep Lng lSize...");
+  //Serial.println(lSize);
   
-  Serial.println("before buf");
-  Serial.println(buf);
+  //Serial.println("before buf");
+  //Serial.println(buf);
   memcpy(buf, &origin[startIndex], lSize);  
   return buf;
 }
@@ -246,8 +268,8 @@ char *grepLat(char s1, char e1, char e2, char *buf){
       return;
   }
   int lSize = finishIndex - startIndex;
-  Serial.println("before lat buf");
-  Serial.println(buf);
+  //Serial.println("before lat buf");
+  //Serial.println(buf);
   //Serial.println("GrepLat lSize....");
   //Serial.println(lSize);
   memcpy(buf, &origin[startIndex], lSize);  
