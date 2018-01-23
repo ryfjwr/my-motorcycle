@@ -27,13 +27,13 @@ void setup(){
   GPS.sendCommand("$PGCMD,33,0*6D"); // Turn Off GPS Antenna Update
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA); //Tell GPS we want only $GPRMC and $GPGGA NMEA sentences
   GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);   // 1 Hz update rate
-  delay(1000);  //Pause
+  //delay(1000);  //Pause
 }
  
  
 void loop()                     // run over and over again
 {
-  delay(5000);
+  //delay(5000);
   readGPS();  //This is a function we define below which reads two NMEA sentences from GPS
 }
 
@@ -48,32 +48,49 @@ void readGPS(){  //This function will read and remember two NMEA sentences from 
   
   NMEA1 = GPS.lastNMEA();      //Once parsed, save NMEA sentence into NMEA1
   
+  
+  /**
   while(!GPS.newNMEAreceived()) {  //Go out and get the second NMEA sentence, should be different type than the first one read above.
     c = GPS.read();
   }
   
-  GPS.parse(GPS.lastNMEA());
-  
+  GPS.parse(GPS.lastNMEA());  
   NMEA2 = GPS.lastNMEA();
-   
-  Serial.println("=====NMEA1======↓");
+  **/
+  
+  if(NMEA1[1] != '$' || NMEA1[2] != 'G' || NMEA1[3] != 'P' || NMEA1[4] != 'G'){
+    Serial.println("invalid format!↓");
+    Serial.println(NMEA1);
+    return;
+  }
+  
+  Serial.println("now this parse strings");
   Serial.println(NMEA1);
 
-  char *lat = grepLatOrLng('A', 'V', 'S', 'N');
-  char *lng = grepLatOrLng('S', 'N', 'W', 'E');
+  // 
+  char latBuf[20];
+  char lngBuf[20];
+  Serial.println("buf allocated");
+  grepLat(',', 'S', 'N', latBuf);
+  grepLng('S', 'N', 'W', 'E', lngBuf);
   
-  char *dummyLat = "39.93847";
+  /**
+  char *lat = "39.93847";
   char *dummyLng = "138.9283";
+  **/
   
   Serial.println("LAT");
-  Serial.println(lat);
+  Serial.println(latBuf);
 
   Serial.println("LNG");
-  Serial.println(lng);
+  Serial.println(lngBuf);
 
-  float _dummyLat = strtod(dummyLat, NULL);
-  float _dummyLng = strtod(dummyLng, NULL);
-
+  float _dummyLat = strtod(latBuf, NULL);
+  float _dummyLng = strtod(lngBuf, NULL);
+  
+  free(latBuf);
+  free(lngBuf);
+  
   if(north == 0) {
     _dummyLat = _dummyLat * (-1);
   }
@@ -81,6 +98,13 @@ void readGPS(){  //This function will read and remember two NMEA sentences from 
   if(east == 0) {
     _dummyLng = _dummyLng * (-1);
   }
+
+
+  // if cannot get attributes, send nothing and exit
+  
+  //if (_dummyLat == 0.00 || _dummyLng == 0.00) {
+  //  return;  
+  //}
   
   sendIO(_dummyLat, _dummyLng);
 }
@@ -89,6 +113,10 @@ void sendIO(float lat, float lng){
   checkQueue();
   
   count++;
+  Serial.println("send lat...");
+  Serial.println(lat);
+  Serial.println("send lng...");
+  Serial.println(lng);
   sakuraio.enqueueTx(0, lat);
   sakuraio.enqueueTx(1, lng);
   sakuraio.enqueueTx(2, count);
@@ -123,18 +151,23 @@ void clearGPS() {
   GPS.parse(GPS.lastNMEA());
 }
 
-char *grepLatOrLng(char s1, char s2, char e1, char e2){
+char *grepLng(char s1, char s2, char e1, char e2, char *buf){  
+  //Serial.println("grepLng");
   const char *origin = NMEA1.c_str();
 
   int loopNumber = strlen(origin) + strlen("\n");
   
   int startIndex = 0;
   int finishIndex = 0;
+  int connmaCount = 0;
 
   for(int i = 0; i < loopNumber; i++){
-    if(origin[i] == s1 || origin[i] == s2) {
-      startIndex = i + 2;
-      if(origin[i] == 'N'){
+    if(origin[i] == ','){
+      connmaCount++;  
+    }
+    if(origin[i] == ',' && connmaCount == 4){     
+      startIndex = i + 1; 
+      if(origin[i - 1] == 'N'){
         north = 1;
       }
     }
@@ -147,15 +180,63 @@ char *grepLatOrLng(char s1, char s2, char e1, char e2){
       break;  
     }
   }
+
+  //Serial.println("grepLng Start index decided...");
+  //Serial.println(startIndex);
+
+  //Serial.println("grepLng FinishIndex decided...");
+  //Serial.println(finishIndex);
+  int lSize = finishIndex - startIndex;
+  
+  //Serial.println("lSize...");
+  //Serial.println(lSize);
+  
+  memcpy(buf, &origin[startIndex], lSize);  
+  return buf;
+}
+
+char *grepLat(char s1, char e1, char e2, char *buf){
+  //Serial.println("grepLat");
+  const char *origin = NMEA1.c_str();
+
+  int loopNumber = strlen(origin) + strlen("\n");
+  int connmaCount = 0;
+  int startIndex = 0;
+  int finishIndex = 0;
+
+  for(int i = 0; i < loopNumber; i++){
+    if(origin[i] == ','){
+      connmaCount++;
+    }
+    if(origin[i] == s1) {
+      if (connmaCount == 2){  
+        //Serial.println("startIndex Charactor...");
+        //Serial.println(origin[i]);
+        startIndex = i + 1;
+      }
+    }
+
+    if(origin[i] == e1 || origin[i] == e2){
+      //Serial.println("finishIndex Charactor...");
+      //Serial.println(origin[i]);
+      finishIndex = i - 1;
+      break;
+    }
+  }
+  //Serial.println("grepLat Start index decided...");
+  //Serial.println(startIndex);
+
+  //Serial.println("grepLat FinishIndex decided...");
+  //Serial.println(finishIndex);
   if(startIndex == 0 || finishIndex == 0){  
+      //Serial.println("Invalid Start or Finish Index");
       return;
   }
-  Serial.println('hoge');
   int lSize = finishIndex - startIndex;
-  char *l = (char *)malloc(lSize) + 1;
-  
-  memcpy(l, &origin[startIndex], lSize);  
-  return l;
+  //Serial.println("GrepLat lSize....");
+  //Serial.println(lSize);
+  memcpy(buf, &origin[startIndex], lSize);  
+  return buf;
 }
 
 
