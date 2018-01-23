@@ -7,6 +7,13 @@ require 'haml'
 require_relative './common.rb'
 
 class App < Sinatra::Base
+
+  def gmap_converter(attr)
+    degree_with_per = attr / 100
+    decimal = degree_with_per - Integer(degree_with_per)
+    Integer(decimal_with_per) + (decimal / 60)
+  end
+
   set :bind, '0.0.0.0'
   configure :development do
     register Sinatra::Reloader
@@ -17,7 +24,10 @@ class App < Sinatra::Base
   end
 
   get '/places' do
-    places = $DB[:places].all
+    places =
+      $DB[:places].all.map do |place|
+        {id: place[:id], lat: gmap_converter(place[:lat]), lng: gmap_converter(place[:lng]), created_at: place[:created_at]}
+      end
     json places
   end
 
