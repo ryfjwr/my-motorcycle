@@ -33,7 +33,7 @@ void setup(){
  
 void loop()                     // run over and over again
 {
-  //delay(5000);
+  delay(5000);
   readGPS();  //This is a function we define below which reads two NMEA sentences from GPS
 }
 
@@ -70,6 +70,9 @@ void readGPS(){  //This function will read and remember two NMEA sentences from 
   // 
   char latBuf[20];
   char lngBuf[20];
+  memset(latBuf, '\0', strlen(latBuf));
+  memset(lngBuf, '\0', strlen(lngBuf));
+  
   Serial.println("buf allocated");
   grepLat(',', 'S', 'N', latBuf);
   grepLng('S', 'N', 'W', 'E', lngBuf);
@@ -88,18 +91,16 @@ void readGPS(){  //This function will read and remember two NMEA sentences from 
   float lat = strtod(latBuf, NULL);
   float lng = strtod(lngBuf, NULL);
 
+  //double lat = atof(latBuf);
+  //double lng = atof(lngBuf);
   Serial.println("float lat");
   Serial.println(lat);
 
   Serial.println("float lng");
   Serial.println(lng);
+  
   //free(latBuf);
   //free(lngBuf);
-
-  Serial.println("north...");
-  Serial.println(north);
-  Serial.println("east");
-  Serial.println(east);
   
   if(north == 0) {    
     lat = lat * (-1);
@@ -124,9 +125,7 @@ void sendIO(float lat, float lng){
   sakuraio.enqueueTx(0, lat);
   sakuraio.enqueueTx(1, lng);
   sakuraio.enqueueTx(2, count); 
-  Serial.println("send Started");
   sakuraio.send();
-  Serial.println("send Finish!");
 }
 
 void checkQueue(){
@@ -174,31 +173,35 @@ char *grepLng(char s1, char s2, char e1, char e2, char *buf){
       connmaCount++;  
     }
     if(origin[i] == ',' && connmaCount == 4){     
-      startIndex = i + 1; 
+      startIndex = i + 1;
       if(origin[i - 1] == 'N'){
         north = 1;
       }
     }
 
     if(origin[i] == e1 || origin[i] == e2){
-      finishIndex = i - 1;
-      if(origin[i] == 'E'){
-        east = 1;  
+      if (connmaCount == 5){
+        finishIndex = i - 1;
+        if(origin[i] == 'E'){
+          east = 1;  
+        }
+        break;  
       }
-      break;  
     }
   }
 
   Serial.println("grepLng Start index decided...");
   Serial.println(startIndex);
 
-  //Serial.println("grepLng FinishIndex decided...");
-  //Serial.println(finishIndex);
+  Serial.println("grepLng FinishIndex decided...");
+  Serial.println(finishIndex);
   int lSize = finishIndex - startIndex;
   
-  Serial.println("lSize...");
+  Serial.println("grep Lng lSize...");
   Serial.println(lSize);
   
+  Serial.println("before buf");
+  Serial.println(buf);
   memcpy(buf, &origin[startIndex], lSize);  
   return buf;
 }
@@ -227,23 +230,26 @@ char *grepLat(char s1, char e1, char e2, char *buf){
     if(origin[i] == e1 || origin[i] == e2){
       //Serial.println("finishIndex Charactor...");
       //Serial.println(origin[i]);
-      finishIndex = i - 1;
-      break;
+      if (connmaCount == 3){
+        finishIndex = i - 1;
+        break;
+      }
     }
   }
-  Serial.println("grepLat Start index decided...");
-  Serial.println(startIndex);
+  //Serial.println("grepLat Start index decided...");
+  //Serial.println(startIndex);
 
   //Serial.println("grepLat FinishIndex decided...");
   //Serial.println(finishIndex);
   if(startIndex == 0 || finishIndex == 0){  
-      //Serial.println("Invalid Start or Finish Index");
+      Serial.println("Invalid Start or Finish Index");
       return;
   }
   int lSize = finishIndex - startIndex;
-  
-  Serial.println("GrepLat lSize....");
-  Serial.println(lSize);
+  Serial.println("before lat buf");
+  Serial.println(buf);
+  //Serial.println("GrepLat lSize....");
+  //Serial.println(lSize);
   memcpy(buf, &origin[startIndex], lSize);  
   return buf;
 }
