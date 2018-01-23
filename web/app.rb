@@ -9,9 +9,14 @@ require_relative './common.rb'
 class App < Sinatra::Base
 
   def gmap_converter(attr)
-    degree_with_per = attr / 100
-    decimal = degree_with_per - Integer(degree_with_per)
-    Integer(decimal_with_per) + (decimal / 60)
+    begin
+      degree_with_per = (attr / 100.0)
+      # 小数
+      converted_degree = Float(degree_with_per.to_s.split('.').last) / 60.0
+      num = 10 ** converted_degree.to_s.split('.').first.length
+      degree_with_per.floor + (converted_degree / num)
+    rescue => e
+    end
   end
 
   set :bind, '0.0.0.0'
